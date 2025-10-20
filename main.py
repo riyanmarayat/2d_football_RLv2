@@ -216,9 +216,27 @@ class FootballRLEnvironment(ParallelEnv):
         Jika tidak ada yang mengontrol bola, cari pemain terdekat dengan bola.
         Jika ada yang mengontrol bola, cari pemaain terdekat dengan pengendali bola.
         """
-        if self.ball_controller is None:
+        if self.ball_states['controlled_by'] is None:
             # Cari pemain yang paling dekat dengan bola
-            player_order = sorted(self.states, key=lambda p: math.hypot(p[]))
+            player_order = sorted(self.states, key=lambda p: math.hypot(p['pos_me_x'] - self.ball_states['pos_x'], p['pos_me_y'] - self.ball_states['pos_y']))
+            index_player_order = [self.states.index(p) for p in player_order]
+        else:
+            # cari pemain yang terderkat dengan pengendali bola tapi yang punya bola duluan
+            index_player_order = [self.ball_states['controlled_by']]
+            player_order = sorted(self.states, key=lambda p: math.hypot(p['pos_me_x'] - self.ball_states['pos_x'], p['pos_me_y'] - self.ball_states['pos_y']))
+            for p in player_order:
+                if p != self.ball_states['controller_by']:
+                    index_player_order.append(self.states.index(p))
+
+        # Loop simulasi sesuai urutan pemain yang paling dekat dengan bola
+        for i in index_player_order:
+            agent = self.agents[i]
+
+            # Jika ini adalah langkah pertama untuk pemain ini, ambil state dan tentukan aksi (dibagi setiap 4 langkah) karena reaksi pemain tidak instan dan sesuai dengan rata-rataa reaksi pemain sepakbola
+            if self.step_count % 4 == 1:
+                """
+                Menentukaan state pemain dan aksi yang akan diambil berdasarkan staate serta menyimpan aksi terakhir
+                """
 
 
     def render(self):
@@ -229,6 +247,17 @@ class FootballRLEnvironment(ParallelEnv):
 
     def action_space(self, agent):
         return self.action_space[agent]
+
+    def get_player_turn(self, obs, info ):
+
+    def get_action(self, obs, info):
+        """
+        Tentukan aksi berdasarkan observasi dan info
+        :param obs:
+        :param info:
+        :return:
+        """
+        raise NotImplementedError
 
     def _get_friction(self, condition):
         return FRICTION.get(condition, 0.985)  # Default friction for 'dry-grass-standard'
